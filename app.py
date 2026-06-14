@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 import json
 import time
-import base64 # 💡 画像データをインターネット経由で安全に送るための新しい道具です
+import base64
 
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
@@ -118,7 +118,6 @@ with tab2:
         prod_delivery = st.selectbox("受け渡し方法", ["手渡し", "郵送", "オンライン"])
         prod_delivery_detail = st.text_area("受け渡しの詳細", placeholder="例：山口市内の〇〇駅周辺で手渡し希望です。など")
         
-        # 📸 本格的な写真アップロード機能
         uploaded_file = st.file_uploader("写真をアップロード（JPEG/PNG）", type=["jpg", "jpeg", "png"])
         
         if st.button("🚀 この内容で掲示板に出品する", use_container_width=True):
@@ -127,7 +126,6 @@ with tab2:
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
-                # 送信用データの基本セット
                 data = {
                     "action": "add_product",
                     "sender": sender,
@@ -142,7 +140,6 @@ with tab2:
                     "image_type": None
                 }
                 
-                # 💡 もし写真が選ばれていたら、GASが受信できる形式（Base64）に変換して合体させる
                 if uploaded_file is not None:
                     file_bytes = uploaded_file.read()
                     base64_encoded = base64.b64encode(file_bytes).decode("utf-8")
@@ -170,8 +167,20 @@ with tab2:
                     
                     col1, col2 = st.columns([1, 2])
                     with col1:
-                        # 💡 スプレッドシートに保存されたGoogleドライブの画像URLを読み込んで表示！
-                        st.image(prod['image_url'], use_container_width=True)
+                        # 💡【バグ修正！】エラーを完全に回避する安全装置つきの画像表示システム
+                        img_url = prod.get('image_url', '')
+                        default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
+                        
+                        # URLが「http」から始まっていて、かつ昨日までの「uploaded」などのゴミデータでないか厳重チェック
+                        if isinstance(img_url, str) and img_url.startswith("http"):
+                            # 万が一読み込み時にエラーが起きてもアプリを絶対に落とさない例外処理
+                            try:
+                                st.image(img_url, use_container_width=True)
+                            except Exception:
+                                st.image(default_img, use_container_width=True)
+                        else:
+                            st.image(default_img, use_container_width=True)
+                            
                     with col2:
                         st.markdown(f"**🏷️ カテゴリ:** {prod['category']}")
                         st.markdown(f"**🤝 受け渡し:** {prod['delivery_method']}")
@@ -235,7 +244,7 @@ with tab2:
                             if sender == "選択してください":
                                 st.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
                             elif not new_comment_msg:
-                                p.error("❌ コメント内容が空欄です。")
+                                st.error("❌ コメント内容が空欄です。")
                             else:
                                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 c_data = {
