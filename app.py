@@ -4,6 +4,7 @@ from datetime import datetime
 import requests
 import json
 import time
+import base64 # 💡 画像データをインターネット経由で安全に送るための新しい道具です
 
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
@@ -14,7 +15,7 @@ GAS_URL = "https://script.google.com/macros/s/AKfycbyctKN6G3AizmIQvOZEgSRYcFQDTa
 # 💰 全員の初期持ちJAY数
 INITIAL_JAY = 1000
 
-# 📊 Googleスプレッドシートからすべてのデータ（名簿、送金、商品、コメント）を一括で取得する関数
+# 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
     try:
         response = requests.get(GAS_URL)
@@ -36,9 +37,9 @@ def get_current_balance(user_name, history):
             balance += log["amount"]
     return balance
 
-# 🔄 最初に一括で全データを読み込む（名簿リストもここに入っています！）
+# 🔄 最初に一括で全データを読み込む
 all_data = get_all_data()
-MEMBER_LIST = all_data.get("members", ["選択してください"]) # 💡 スプレッドシートの会員名簿を自動セット！
+MEMBER_LIST = all_data.get("members", ["選択してください"])
 all_history = all_data.get("history", [])
 all_products = all_data.get("products", [])
 all_comments = all_data.get("comments", [])
@@ -117,18 +118,16 @@ with tab2:
         prod_delivery = st.selectbox("受け渡し方法", ["手渡し", "郵送", "オンライン"])
         prod_delivery_detail = st.text_area("受け渡しの詳細", placeholder="例：山口市内の〇〇駅周辺で手渡し希望です。など")
         
+        # 📸 本格的な写真アップロード機能
         uploaded_file = st.file_uploader("写真をアップロード（JPEG/PNG）", type=["jpg", "jpeg", "png"])
-        prod_image_url = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500"
-        if uploaded_file is not None:
-            st.image(uploaded_file, caption='📷 アップロードされた写真のプレビュー', width=200)
-            prod_image_url = "uploaded"
-            
+        
         if st.button("🚀 この内容で掲示板に出品する", use_container_width=True):
             if sender == "選択してください":
                 st.error("❌ 画面左側（メニュー）であなたのお名前を選択してください。")
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
+                # 送信用データの基本セット
                 data = {
                     "action": "add_product",
                     "sender": sender,
@@ -138,9 +137,20 @@ with tab2:
                     "amount": prod_price,
                     "delivery_method": prod_delivery,
                     "delivery_detail": prod_delivery_detail,
-                    "image_url": prod_image_url
+                    "image_data": None,
+                    "image_name": None,
+                    "image_type": None
                 }
-                with st.spinner("🔄 掲示板に出品を登録中..."):
+                
+                # 💡 もし写真が選ばれていたら、GASが受信できる形式（Base64）に変換して合体させる
+                if uploaded_file is not None:
+                    file_bytes = uploaded_file.read()
+                    base64_encoded = base64.b64encode(file_bytes).decode("utf-8")
+                    data["image_data"] = base64_encoded
+                    data["image_name"] = uploaded_file.name
+                    data["image_type"] = uploaded_file.type
+                
+                with st.spinner("🔄 画像をGoogleドライブに保存して出品中... (数秒かかります)"):
                     res = requests.post(GAS_URL, data=json.dumps(data))
                     if res.status_code == 200:
                         st.success("🎉 掲示板への出品が完了しました！")
@@ -160,7 +170,8 @@ with tab2:
                     
                     col1, col2 = st.columns([1, 2])
                     with col1:
-                        st.image("https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300", use_container_width=True)
+                        # 💡 スプレッドシートに保存されたGoogleドライブの画像URLを読み込んで表示！
+                        st.image(prod['image_url'], use_container_width=True)
                     with col2:
                         st.markdown(f"**🏷️ カテゴリ:** {prod['category']}")
                         st.markdown(f"**🤝 受け渡し:** {prod['delivery_method']}")
@@ -224,7 +235,7 @@ with tab2:
                             if sender == "選択してください":
                                 st.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
                             elif not new_comment_msg:
-                                st.error("❌ コメント内容が空欄です。")
+                                p.error("❌ コメント内容が空欄です。")
                             else:
                                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 c_data = {
