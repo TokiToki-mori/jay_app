@@ -8,7 +8,7 @@ import time
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの最新GASのURL（完全連動確認済み）
+# 🔗 モリケンタロウさんの最新GASのURL
 GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
 
 # 💰 全員の初期持ちJAY数
@@ -128,18 +128,24 @@ with tab2:
                 # 💡 初期値はスニーカー画像
                 final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
-                # 📸 写真があれば、登録不要のGyazo無料パブリックルートで完全匿名アップロード
+                # 📸 写真があれば、Gyazo無料パブリックルートで完全匿名アップロード
                 if uploaded_file is not None:
                     with st.spinner("📸 画像をインターネット上にアップロード中..."):
                         try:
-                            # トークンによる認証エラーを回避するストレートなルートに変更しました
                             gyazo_url = "https://upload.gyazo.com/api/upload/get_image_url"
                             files = {"imagedata": uploaded_file.getvalue()}
                             
                             response = requests.post(gyazo_url, files=files)
                             if response.status_code == 200:
-                                # 返ってきたURLテキストをそのまま取得
-                                final_image_url = response.text
+                                # 【★修正ポイント】返ってきた生テキストを画像URLとしてそのまま使用
+                                raw_url = response.text.strip()
+                                # もしURLが「http」で始まっていない場合は補完する安全処理
+                                if raw_url.startswith("//"):
+                                    final_image_url = "https:" + raw_url
+                                elif not raw_url.startswith("http"):
+                                    final_image_url = "https://" + raw_url
+                                else:
+                                    final_image_url = raw_url
                             else:
                                 st.error(f"❌ 画像アップロードに失敗しました (エラーコード: {response.status_code})")
                         except Exception as e:
@@ -183,7 +189,18 @@ with tab2:
                         img_url = prod.get('image_url', '')
                         default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                         
-                        if isinstance(img_url, str) and img_url.startswith("http"):
+                        # 【★修正ポイント】スプレッドシートに書き込まれた「gyo!」や「upload.gyazo.com」のテキストを正しい画像形式に変換して表示
+                        if isinstance(img_url, str) and ("gyazo" in img_url or "gyo!" in img_url):
+                            # 「gyo! 」という文字が先頭についている場合は、それを取り除く
+                            clean_url = img_url.replace("gyo!", "").replace(" ", "").strip()
+                            if not clean_url.startswith("http"):
+                                clean_url = "https://" + clean_url
+                            
+                            try:
+                                st.image(clean_url, use_container_width=True)
+                            except Exception:
+                                st.image(default_img, use_container_width=True)
+                        elif isinstance(img_url, str) and img_url.startswith("http"):
                             try:
                                 st.image(img_url, use_container_width=True)
                             except Exception:
@@ -254,7 +271,7 @@ with tab2:
                             if sender == "選択してください":
                                 st.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
                             elif not new_comment_msg:
-                                st.error("❌ コメント内容が空欄です。")
+                                '❌ コメント内容が空欄です。'
                             else:
                                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 c_data = {
