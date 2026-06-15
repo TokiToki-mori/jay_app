@@ -5,6 +5,8 @@ import requests
 import json
 import time
 import base64
+from PIL import Image # 💡 画像をギュッと小さく軽量化するための専門の道具です
+import io
 
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
@@ -141,11 +143,34 @@ with tab2:
                 }
                 
                 if uploaded_file is not None:
-                    file_bytes = uploaded_file.read()
-                    base64_encoded = base64.b64encode(file_bytes).decode("utf-8")
-                    data["image_data"] = base64_encoded
-                    data["image_name"] = uploaded_file.name
-                    data["image_type"] = uploaded_file.type
+                    try:
+                        # 💡【劇的軽量化システム】スマホのデカい写真を、横幅最大800pxの超軽量JPEGに変換！
+                        img = Image.open(uploaded_file)
+                        
+                        # スマートフォンの撮影向き（回転）を自動で正常に直す安全装置
+                        if hasattr(img, '_getexif') and img._getexif() is not None:
+                            exif = dict(img._getexif().items())
+                            if 274 in exif:
+                                if exif[274] == 3: img = img.rotate(180, expand=True)
+                                elif exif[274] == 6: img = img.rotate(270, expand=True)
+                                elif exif[274] == 8: img = img.rotate(90, expand=True)
+
+                        img.thumbnail((800, 800)) # 縦横どちらかが最大800pxになるようにシュリンク
+                        
+                        # RGB形式（一般的な画像形式）に変換して、圧縮をかけながらメモリ上に保存
+                        if img.mode != "RGB":
+                            img = img.convert("RGB")
+                            
+                        buffer = io.BytesIO()
+                        img.save(buffer, format="JPEG", quality=75) # 画質を75%に落として200KB前後に極限圧縮
+                        file_bytes = buffer.getvalue()
+                        
+                        base64_encoded = base64.b64encode(file_bytes).decode("utf-8")
+                        data["image_data"] = base64_encoded
+                        data["image_name"] = uploaded_file.name.split('.')[0] + ".jpg"
+                        data["image_type"] = "image/jpeg"
+                    except Exception as e:
+                        st.warning(f"⚠️ 画像の圧縮処理で問題が発生したため、デフォルト画像になります。")
                 
                 with st.spinner("🔄 画像をGoogleドライブに保存して出品中... (数秒かかります)"):
                     res = requests.post(GAS_URL, data=json.dumps(data))
@@ -167,13 +192,10 @@ with tab2:
                     
                     col1, col2 = st.columns([1, 2])
                     with col1:
-                        # 💡【バグ修正！】エラーを完全に回避する安全装置つきの画像表示システム
                         img_url = prod.get('image_url', '')
                         default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                         
-                        # URLが「http」から始まっていて、かつ昨日までの「uploaded」などのゴミデータでないか厳重チェック
                         if isinstance(img_url, str) and img_url.startswith("http"):
-                            # 万が一読み込み時にエラーが起きてもアプリを絶対に落とさない例外処理
                             try:
                                 st.image(img_url, use_container_width=True)
                             except Exception:
