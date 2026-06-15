@@ -128,18 +128,16 @@ with tab2:
                 # 💡 初期値はスニーカー画像
                 final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
-                # 📸 写真があれば、登録不要の大手のGyazoサーバーへ匿名アップロード
+                # 📸 写真があれば、登録不要のGyazoサーバーへ匿名アップロード
                 if uploaded_file is not None:
                     with st.spinner("📸 画像をインターネット上にアップロード中..."):
                         try:
                             gyazo_url = "https://upload.gyazo.com/api/upload"
-                            # アプリ専用に発行した登録不要のトークンです
                             payload = {"access_token": "a_AcoK5p0fG6Y7BIs4mZ51bfeZ7h12N_W8HqR2vX3Y0"}
                             files = {"imagedata": uploaded_file.getvalue()}
                             
                             response = requests.post(gyazo_url, data=payload, files=files)
                             if response.status_code == 200:
-                                # アップロード成功！直リンクURL（i.gyazo.com）を抽出
                                 final_image_url = response.json()["url"]
                             else:
                                 st.warning("⚠️ 画像サーバーが混み合っているため、デフォルト画像で処理を続行します。")
@@ -158,7 +156,7 @@ with tab2:
                     "delivery_detail": prod_delivery_detail,
                     "image_data": "uploaded",
                     "image_name": "image.jpg",
-                    "image_url": final_image_url  # Gyazoが作った本物の画像URLを引き渡します
+                    "image_url": final_image_url
                 }
                 
                 with st.spinner("🔄 スプレッドシートに商品情報を記録中..."):
@@ -253,7 +251,7 @@ with tab2:
                         
                         if submit_comment:
                             if sender == "選択してください":
-                                Red.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
+                                st.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
                             elif not new_comment_msg:
                                 st.error("❌ コメント内容が空欄です。")
                             else:
