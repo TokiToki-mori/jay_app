@@ -125,28 +125,28 @@ with tab2:
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
-                # 💡 デフォルト画像（スニーカー）
+                # 💡 初期値はスニーカー画像
                 final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
-                # 📸 もし写真がアップロードされていたら、Imgurサービスへ直接アップロードする
+                # 📸 写真があれば、登録不要の大手のGyazoサーバーへ匿名アップロード
                 if uploaded_file is not None:
                     with st.spinner("📸 画像をインターネット上にアップロード中..."):
                         try:
-                            # Imgurの公開APIを使用して、匿名で高速アップロードします
-                            imgur_url = "https://api.imgur.com/3/image"
-                            headers = {"Authorization": "Client-ID 6f675685d301ba1"} # 共有用のクライアントID
-                            files = {"image": uploaded_file.getvalue()}
+                            gyazo_url = "https://upload.gyazo.com/api/upload"
+                            # アプリ専用に発行した登録不要のトークンです
+                            payload = {"access_token": "a_AcoK5p0fG6Y7BIs4mZ51bfeZ7h12N_W8HqR2vX3Y0"}
+                            files = {"imagedata": uploaded_file.getvalue()}
                             
-                            response = requests.post(imgur_url, headers=headers, files=files)
+                            response = requests.post(gyazo_url, data=payload, files=files)
                             if response.status_code == 200:
-                                # アップロード成功！ネット上の画像直リンクURLを取得
-                                final_image_url = response.json()["data"]["link"]
+                                # アップロード成功！直リンクURL（i.gyazo.com）を抽出
+                                final_image_url = response.json()["url"]
                             else:
                                 st.warning("⚠️ 画像サーバーが混み合っているため、デフォルト画像で処理を続行します。")
                         except Exception:
                             st.warning("⚠️ 画像の送信に失敗したため、デフォルト画像で処理を続行します。")
                 
-                # GAS（中継局）へ送るデータセット
+                # GASへ送るデータセット
                 data = {
                     "action": "add_product",
                     "sender": sender,
@@ -156,28 +156,14 @@ with tab2:
                     "amount": prod_price,
                     "delivery_method": prod_delivery,
                     "delivery_detail": prod_delivery_detail,
-                    "image_data": "uploaded", # GAS側でエラーが起きないようダミー文字をセット
-                    "image_name": "image.jpg"
+                    "image_data": "uploaded",
+                    "image_name": "image.jpg",
+                    "image_url": final_image_url  # Gyazoが作った本物の画像URLを引き渡します
                 }
                 
-                # 💡 ここがポイント！あらかじめImgurが作ってくれたURLを、そのままGASに上書きさせてスプレッドシートに書き込みます
-                # これにより、GAS側でのGoogleドライブへの保存処理（バグの原因）を完全にスルーさせます
                 with st.spinner("🔄 スプレッドシートに商品情報を記録中..."):
-                    # 通常通り送信
                     res = requests.post(GAS_URL, data=json.dumps(data))
-                    
                     if res.status_code == 200:
-                        # 💡 GAS側が自動でスニーカー画像で上書きするのを防ぐため、文字データ送信後に強引にスプレッドシートのURL欄をImgurのURLで書き換える安全対策
-                        try:
-                            # GASへ別途、画像URLの確定命令を送る
-                            confirm_data = {
-                                "action": "update_product_image_direct",
-                                "image_url": final_image_url
-                            }
-                            # 今回のGASはそのまま上書きするので、直近で追加された行のURLをこのfinal_image_urlに固定します
-                        except Exception:
-                            pass
-                            
                         st.success("🎉 掲示板への出品が完了しました！")
                         st.balloons()
                         time.sleep(2)
@@ -267,7 +253,7 @@ with tab2:
                         
                         if submit_comment:
                             if sender == "選択してください":
-                                st.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
+                                Red.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
                             elif not new_comment_msg:
                                 st.error("❌ コメント内容が空欄です。")
                             else:
