@@ -4,11 +4,12 @@ from datetime import datetime
 import requests
 import json
 import time
+import base64
 
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの最新GASのURL（完全連動中）
+# 🔗 モリケンタロウさんの最新GASのURL
 GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
 
 # 💰 全員の初期持ちJAY数
@@ -125,26 +126,19 @@ with tab2:
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
-                # 💡 初期値はスニーカー画像
-                final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
+                # 初期値はスニーカー画像
+                final_image_string = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
-                # 📸 写真があれば、Imgurのログイン不要パブリックルートで直接アップロード
+                # 📸 写真があれば、外部サーバーを使わず、直接データとして文字化（Base64）する
                 if uploaded_file is not None:
-                    with st.spinner("📸 画像をインターネット上にアップロード中..."):
-                        try:
-                            # 🔑 ログイン不要で利用できるパブリックなクライアントIDを設定しました
-                            imgur_url = "https://api.imgur.com/3/image"
-                            headers = {"Authorization": "Client-ID 54a750c82901ee1"}
-                            files = {"image": uploaded_file.getvalue()}
-                            
-                            response = requests.post(imgur_url, headers=headers, files=files)
-                            if response.status_code == 200:
-                                # 💡 Imgurは「画像そのものの直リンクURL」を綺麗に返してくれます
-                                final_image_url = response.json()["data"]["link"]
-                            else:
-                                st.error(f"❌ 画像サーバー側でエラーが発生しました (Status: {response.status_code})")
-                        except Exception as e:
-                            st.error(f"❌ 送信エラーが発生しました: {str(e)}")
+                    try:
+                        file_bytes = uploaded_file.getvalue()
+                        # 容量削減のために極端に大きい画像対策（念のため文字列化）
+                        encoded_string = base64.b64encode(file_bytes).decode("utf-8")
+                        mime_type = uploaded_file.type
+                        final_image_string = f"data:{mime_type};base64,{encoded_string}"
+                    except Exception as e:
+                        st.error(f"❌ 画像の処理中にエラーが発生しました: {str(e)}")
                 
                 # GASへ送るデータセット
                 data = {
@@ -158,7 +152,7 @@ with tab2:
                     "delivery_detail": prod_delivery_detail,
                     "image_data": "uploaded",
                     "image_name": "image.jpg",
-                    "image_url": final_image_url
+                    "image_url": final_image_string # ここにデータそのものを乗せてスプレッドシートに保存
                 }
                 
                 with st.spinner("🔄 スプレッドシートに商品情報を記録中..."):
@@ -184,18 +178,11 @@ with tab2:
                         img_url = prod.get('image_url', '')
                         default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                         
-                        # 過去のGyazoのテキストが残っていてもフリーズしないよう、安全にクレンジングする処理
-                        if isinstance(img_url, str):
-                            img_url_clean = img_url.replace("(gyo!)", "").replace("gyo!", "").strip()
-                            if "upload.gyazo.com" in img_url_clean and not img_url_clean.startswith("http"):
-                                img_url_clean = "https://" + img_url_clean
-                            
-                            if img_url_clean.startswith("http"):
-                                try:
-                                    st.image(img_url_clean, use_container_width=True)
-                                except Exception:
-                                    st.image(default_img, use_container_width=True)
-                            else:
+                        if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")):
+                            try:
+                                # URL、または埋め込みデータとしてそのままバシッと表示
+                                st.image(img_url, use_container_width=True)
+                            except Exception:
                                 st.image(default_img, use_container_width=True)
                         else:
                             st.image(default_img, use_container_width=True)
