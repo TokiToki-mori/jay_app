@@ -11,8 +11,8 @@ import io
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# モリケンタロウさんの専用ウェブアプリURL
-GAS_URL = "https://script.google.com/macros/s/AKfycbyctKN6G3AizmIQvOZEgSRYcFQDTaoAVK4ksKseTatgDPgua8BZSgawVFEhvp8RlDA/exec"
+# 🔗 モリケンタロウさんの最新ウェブアプリURL（全員権限版）
+GAS_URL = "https://script.google.com/macros/s/AKfycbyUDu0zqzIjgtm5FNlhrT8YgbLbC7TI14WWlReCfi2dhogUeAiKbF5haIyle79zkUI/exec"
 
 # 💰 全員の初期持ちJAY数
 INITIAL_JAY = 1000
