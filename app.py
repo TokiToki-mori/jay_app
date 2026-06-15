@@ -12,7 +12,7 @@ import io
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
 # 🔗 モリケンタロウさんの最新ウェブアプリURL（全員権限版）
-GAS_URL = "https://script.google.com/macros/s/AKfycbyUDu0zqzIjgtm5FNlhrT8YgbLbC7TI14WWlReCfi2dhogUeAiKbF5haIyle79zkUI/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
 
 # 💰 全員の初期持ちJAY数
 INITIAL_JAY = 1000
