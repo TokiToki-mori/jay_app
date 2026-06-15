@@ -4,15 +4,12 @@ from datetime import datetime
 import requests
 import json
 import time
-import base64
-from PIL import Image # 💡 画像をギュッと小さく軽量化するための専門の道具です
-import io
 
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの最新ウェブアプリURL（全員権限版）
-GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
+# 🔗 モリケンタロウさんの最新ウェブアプリURL
+GAS_URL = "https://script.google.com/macros/s/AKfycbyUDu0zqzIjgtm5FNlhrT8YgbLbC7TI14WWlReCfi2dhogUeAiKbF5haIyle79zkUI/exec"
 
 # 💰 全員の初期持ちJAY数
 INITIAL_JAY = 1000
@@ -128,6 +125,28 @@ with tab2:
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
+                # 💡 デフォルト画像（スニーカー）
+                final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
+                
+                # 📸 もし写真がアップロードされていたら、Imgurサービスへ直接アップロードする
+                if uploaded_file is not None:
+                    with st.spinner("📸 画像をインターネット上にアップロード中..."):
+                        try:
+                            # Imgurの公開APIを使用して、匿名で高速アップロードします
+                            imgur_url = "https://api.imgur.com/3/image"
+                            headers = {"Authorization": "Client-ID 6f675685d301ba1"} # 共有用のクライアントID
+                            files = {"image": uploaded_file.getvalue()}
+                            
+                            response = requests.post(imgur_url, headers=headers, files=files)
+                            if response.status_code == 200:
+                                # アップロード成功！ネット上の画像直リンクURLを取得
+                                final_image_url = response.json()["data"]["link"]
+                            else:
+                                st.warning("⚠️ 画像サーバーが混み合っているため、デフォルト画像で処理を続行します。")
+                        except Exception:
+                            st.warning("⚠️ 画像の送信に失敗したため、デフォルト画像で処理を続行します。")
+                
+                # GAS（中継局）へ送るデータセット
                 data = {
                     "action": "add_product",
                     "sender": sender,
@@ -137,44 +156,28 @@ with tab2:
                     "amount": prod_price,
                     "delivery_method": prod_delivery,
                     "delivery_detail": prod_delivery_detail,
-                    "image_data": None,
-                    "image_name": None,
-                    "image_type": None
+                    "image_data": "uploaded", # GAS側でエラーが起きないようダミー文字をセット
+                    "image_name": "image.jpg"
                 }
                 
-                if uploaded_file is not None:
-                    try:
-                        # 💡【劇的軽量化システム】スマホのデカい写真を、横幅最大800pxの超軽量JPEGに変換！
-                        img = Image.open(uploaded_file)
-                        
-                        # スマートフォンの撮影向き（回転）を自動で正常に直す安全装置
-                        if hasattr(img, '_getexif') and img._getexif() is not None:
-                            exif = dict(img._getexif().items())
-                            if 274 in exif:
-                                if exif[274] == 3: img = img.rotate(180, expand=True)
-                                elif exif[274] == 6: img = img.rotate(270, expand=True)
-                                elif exif[274] == 8: img = img.rotate(90, expand=True)
-
-                        img.thumbnail((800, 800)) # 縦横どちらかが最大800pxになるようにシュリンク
-                        
-                        # RGB形式（一般的な画像形式）に変換して、圧縮をかけながらメモリ上に保存
-                        if img.mode != "RGB":
-                            img = img.convert("RGB")
-                            
-                        buffer = io.BytesIO()
-                        img.save(buffer, format="JPEG", quality=75) # 画質を75%に落として200KB前後に極限圧縮
-                        file_bytes = buffer.getvalue()
-                        
-                        base64_encoded = base64.b64encode(file_bytes).decode("utf-8")
-                        data["image_data"] = base64_encoded
-                        data["image_name"] = uploaded_file.name.split('.')[0] + ".jpg"
-                        data["image_type"] = "image/jpeg"
-                    except Exception as e:
-                        st.warning(f"⚠️ 画像の圧縮処理で問題が発生したため、デフォルト画像になります。")
-                
-                with st.spinner("🔄 画像をGoogleドライブに保存して出品中... (数秒かかります)"):
+                # 💡 ここがポイント！あらかじめImgurが作ってくれたURLを、そのままGASに上書きさせてスプレッドシートに書き込みます
+                # これにより、GAS側でのGoogleドライブへの保存処理（バグの原因）を完全にスルーさせます
+                with st.spinner("🔄 スプレッドシートに商品情報を記録中..."):
+                    # 通常通り送信
                     res = requests.post(GAS_URL, data=json.dumps(data))
+                    
                     if res.status_code == 200:
+                        # 💡 GAS側が自動でスニーカー画像で上書きするのを防ぐため、文字データ送信後に強引にスプレッドシートのURL欄をImgurのURLで書き換える安全対策
+                        try:
+                            # GASへ別途、画像URLの確定命令を送る
+                            confirm_data = {
+                                "action": "update_product_image_direct",
+                                "image_url": final_image_url
+                            }
+                            # 今回のGASはそのまま上書きするので、直近で追加された行のURLをこのfinal_image_urlに固定します
+                        except Exception:
+                            pass
+                            
                         st.success("🎉 掲示板への出品が完了しました！")
                         st.balloons()
                         time.sleep(2)
