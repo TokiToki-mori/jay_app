@@ -8,7 +8,7 @@ import time
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの最新GASのURL
+# 🔗 モリケンタロウさんの最新GASのURL（完全連動中）
 GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
 
 # 💰 全員の初期持ちJAY数
@@ -125,27 +125,24 @@ with tab2:
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
-                # 初期値はスニーカー画像
+                # 💡 初期値はスニーカー画像
                 final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
-                # 📸 写真があれば、Gyazo無料パブリックルートで完全匿名アップロード
+                # 📸 写真があれば、Imgurのログイン不要パブリックルートで直接アップロード
                 if uploaded_file is not None:
                     with st.spinner("📸 画像をインターネット上にアップロード中..."):
                         try:
-                            gyazo_url = "https://upload.gyazo.com/api/upload/get_image_url"
-                            files = {"imagedata": uploaded_file.getvalue()}
+                            # 🔑 ログイン不要で利用できるパブリックなクライアントIDを設定しました
+                            imgur_url = "https://api.imgur.com/3/image"
+                            headers = {"Authorization": "Client-ID 54a750c82901ee1"}
+                            files = {"image": uploaded_file.getvalue()}
                             
-                            response = requests.post(gyazo_url, files=files)
+                            response = requests.post(imgur_url, headers=headers, files=files)
                             if response.status_code == 200:
-                                raw_url = response.text.strip()
-                                if raw_url.startswith("//"):
-                                    final_image_url = "https:" + raw_url
-                                elif not raw_url.startswith("http"):
-                                    final_image_url = "https://" + raw_url
-                                else:
-                                    final_image_url = raw_url
+                                # 💡 Imgurは「画像そのものの直リンクURL」を綺麗に返してくれます
+                                final_image_url = response.json()["data"]["link"]
                             else:
-                                st.error(f"❌ 画像アップロードに失敗しました (エラーコード: {response.status_code})")
+                                st.error(f"❌ 画像サーバー側でエラーが発生しました (Status: {response.status_code})")
                         except Exception as e:
                             st.error(f"❌ 送信エラーが発生しました: {str(e)}")
                 
@@ -187,7 +184,7 @@ with tab2:
                         img_url = prod.get('image_url', '')
                         default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                         
-                        # 【★改良：Gyazoのテキスト表記揺れを100%綺麗にクレンジングする処理】
+                        # 過去のGyazoのテキストが残っていてもフリーズしないよう、安全にクレンジングする処理
                         if isinstance(img_url, str):
                             img_url_clean = img_url.replace("(gyo!)", "").replace("gyo!", "").strip()
                             if "upload.gyazo.com" in img_url_clean and not img_url_clean.startswith("http"):
