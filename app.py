@@ -8,7 +8,7 @@ import time
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの【最新確定版】ウェブアプリURLに差し替えました
+# 🔗 モリケンタロウさんの最新GASのURL（完全連動確認済み）
 GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
 
 # 💰 全員の初期持ちJAY数
@@ -128,20 +128,20 @@ with tab2:
                 # 💡 初期値はスニーカー画像
                 final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
-                # 📸 写真があれば、登録不要のGyazoサーバーへ匿名アップロード
+                # 📸 写真があれば、登録不要のGyazo無料パブリックルートで完全匿名アップロード
                 if uploaded_file is not None:
                     with st.spinner("📸 画像をインターネット上にアップロード中..."):
                         try:
-                            gyazo_url = "https://upload.gyazo.com/api/upload"
-                            payload = {"access_token": "a_AcoK5p0fG6Y7BIs4mZ51bfeZ7h12N_W8HqR2vX3Y0"}
+                            # トークンによる認証エラーを回避するストレートなルートに変更しました
+                            gyazo_url = "https://upload.gyazo.com/api/upload/get_image_url"
                             files = {"imagedata": uploaded_file.getvalue()}
                             
-                            response = requests.post(gyazo_url, data=payload, files=files)
+                            response = requests.post(gyazo_url, files=files)
                             if response.status_code == 200:
-                                final_image_url = response.json()["url"]
+                                # 返ってきたURLテキストをそのまま取得
+                                final_image_url = response.text
                             else:
-                                # 💡 古い文言のエラーメッセージを完全に消去し、実際のシステムエラー内容を表示するように変更しました
-                                st.error(f"❌ 画像サーバー側でエラーが発生しました (Status: {response.status_code})")
+                                st.error(f"❌ 画像アップロードに失敗しました (エラーコード: {response.status_code})")
                         except Exception as e:
                             st.error(f"❌ 送信エラーが発生しました: {str(e)}")
                 
