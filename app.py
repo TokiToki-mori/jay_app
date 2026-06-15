@@ -125,7 +125,7 @@ with tab2:
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
-                # 💡 初期値はスニーカー画像
+                # 初期値はスニーカー画像
                 final_image_url = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
                 # 📸 写真があれば、Gyazo無料パブリックルートで完全匿名アップロード
@@ -137,9 +137,7 @@ with tab2:
                             
                             response = requests.post(gyazo_url, files=files)
                             if response.status_code == 200:
-                                # 【★修正ポイント】返ってきた生テキストを画像URLとしてそのまま使用
                                 raw_url = response.text.strip()
-                                # もしURLが「http」で始まっていない場合は補完する安全処理
                                 if raw_url.startswith("//"):
                                     final_image_url = "https:" + raw_url
                                 elif not raw_url.startswith("http"):
@@ -189,21 +187,18 @@ with tab2:
                         img_url = prod.get('image_url', '')
                         default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                         
-                        # 【★修正ポイント】スプレッドシートに書き込まれた「gyo!」や「upload.gyazo.com」のテキストを正しい画像形式に変換して表示
-                        if isinstance(img_url, str) and ("gyazo" in img_url or "gyo!" in img_url):
-                            # 「gyo! 」という文字が先頭についている場合は、それを取り除く
-                            clean_url = img_url.replace("gyo!", "").replace(" ", "").strip()
-                            if not clean_url.startswith("http"):
-                                clean_url = "https://" + clean_url
+                        # 【★改良：Gyazoのテキスト表記揺れを100%綺麗にクレンジングする処理】
+                        if isinstance(img_url, str):
+                            img_url_clean = img_url.replace("(gyo!)", "").replace("gyo!", "").strip()
+                            if "upload.gyazo.com" in img_url_clean and not img_url_clean.startswith("http"):
+                                img_url_clean = "https://" + img_url_clean
                             
-                            try:
-                                st.image(clean_url, use_container_width=True)
-                            except Exception:
-                                st.image(default_img, use_container_width=True)
-                        elif isinstance(img_url, str) and img_url.startswith("http"):
-                            try:
-                                st.image(img_url, use_container_width=True)
-                            except Exception:
+                            if img_url_clean.startswith("http"):
+                                try:
+                                    st.image(img_url_clean, use_container_width=True)
+                                except Exception:
+                                    st.image(default_img, use_container_width=True)
+                            else:
                                 st.image(default_img, use_container_width=True)
                         else:
                             st.image(default_img, use_container_width=True)
@@ -271,7 +266,7 @@ with tab2:
                             if sender == "選択してください":
                                 st.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
                             elif not new_comment_msg:
-                                '❌ コメント内容が空欄です。'
+                                st.error("❌ コメント内容が空欄です。")
                             else:
                                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 c_data = {
