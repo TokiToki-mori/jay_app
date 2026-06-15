@@ -8,8 +8,8 @@ import time
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの最新ウェブアプリURL
-GAS_URL = "https://script.google.com/macros/s/AKfycbyUDu0zqzIjgtm5FNlhrT8YgbLbC7TI14WWlReCfi2dhogUeAiKbF5haIyle79zkUI/exec"
+# 🔗 モリケンタロウさんの【最新確定版】ウェブアプリURLに差し替えました
+GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
 
 # 💰 全員の初期持ちJAY数
 INITIAL_JAY = 1000
@@ -140,9 +140,10 @@ with tab2:
                             if response.status_code == 200:
                                 final_image_url = response.json()["url"]
                             else:
-                                st.warning("⚠️ 画像サーバーが混み合っているため、デフォルト画像で処理を続行します。")
-                        except Exception:
-                            st.warning("⚠️ 画像の送信に失敗したため、デフォルト画像で処理を続行します。")
+                                # 💡 古い文言のエラーメッセージを完全に消去し、実際のシステムエラー内容を表示するように変更しました
+                                st.error(f"❌ 画像サーバー側でエラーが発生しました (Status: {response.status_code})")
+                        except Exception as e:
+                            st.error(f"❌ 送信エラーが発生しました: {str(e)}")
                 
                 # GASへ送るデータセット
                 data = {
