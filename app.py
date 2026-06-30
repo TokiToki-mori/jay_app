@@ -103,14 +103,13 @@ if authenticated:
     # 🏪 タブ1：コミュニティ掲示板画面
     # ==========================================
     with tab1:
-        # 出品完了後に「一覧を見る」へ自動で戻すため、SessionStateでラジオボタンの初期値を管理します
-        if "bazaar_menu_index" not in st.session_state:
-            st.session_state.bazaar_menu_index = 0
+        # ラジオボタンの状態をSessionStateで直接管理
+        if "bazaar_menu_radio" not in st.session_state:
+            st.session_state.bazaar_menu_radio = "📦 出品されている商品を見る"
             
         bazaar_mode = st.radio(
             "メニューを選んでください", 
             ["📦 出品されている商品を見る", "➕ 新しい商品・サービスを出品する"], 
-            index=st.session_state.bazaar_menu_index,
             horizontal=True,
             key="bazaar_menu_radio"
         )
@@ -175,20 +174,17 @@ if authenticated:
                             st.success("🎉 掲示板への投稿が完了しました！")
                             st.balloons()
                             
-                            # 【新規追加】「そういえば」の場合は、自動でJay事務局からのお礼コメントを裏側で追加送信
+                            # 「そういえば」の場合は、自動でJay事務局からのお礼コメントを裏側で追加送信
                             if prod_category == "✨ そういえば（JWティー体験談・気づき）":
                                 try:
-                                    # 最新の投稿一覧を取得して、今投稿した商品のIDを特定
                                     latest_data = requests.get(GAS_URL).json()
                                     latest_products = latest_data.get("products", [])
                                     if latest_products:
-                                        # senderが一致する一番最後の投稿＝今追加した投稿
                                         my_posts = [p for p in latest_products if p["sender"] == sender]
                                         if my_posts:
                                             target_prod_id = my_posts[-1]["id"]
                                             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                             
-                                            # 事務局コメントの送信
                                             comment_data = {
                                                 "action": "add_comment",
                                                 "product_id": target_prod_id,
@@ -198,11 +194,11 @@ if authenticated:
                                             }
                                             requests.post(GAS_URL, data=json.dumps(comment_data))
                                 except Exception:
-                                    pass # コメント連携の例外はアプリを止めないよう処理
+                                    pass
                             
-                            # 【機能改善】風船を見せた後、自動的に「出品されている商品を見る」タブに戻るように設定
+                            # 【修正点】ラジオボタンの状態を強制的に「商品を見る」に書き換えてリロード
                             time.sleep(2)
-                            st.session_state.bazaar_menu_index = 0
+                            st.session_state.bazaar_menu_radio = "📦 出品されている商品を見る"
                             st.rerun()
         else:
             st.subheader("💬 投稿一覧")
@@ -278,7 +274,6 @@ if authenticated:
                         
                         if prod_comments:
                             for cm in prod_comments:
-                                # Jay事務局からのコメントは少し目立つように太字で強調表示
                                 if cm['sender'] == "Jay事務局":
                                     st.markdown(f"📢 **{cm['sender']}** ({cm['timestamp']}): **{cm['message']}**")
                                 else:
