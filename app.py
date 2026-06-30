@@ -25,26 +25,35 @@ def get_all_data():
 # 🔄 最初に一括で全データを読み込む
 all_data = get_all_data()
 
-# 【★名簿シート限定読み込み＆残高完全同期】
+# ==========================================
+# 👤 【★データ不整合の完全撲滅ロジック】
+# ==========================================
 raw_members = all_data.get("members", [])
 MEMBER_LIST = ["選択してください"]
 PASSWORD_DICT = {}
 BALANCE_DICT = {} 
 
-# 💡 履歴や商品シートからは一切名前を拾わず、「会員名簿シート」の情報のみでドロップダウンを作成
+# 他のシート（過去ログなど）からは一切拾わず、GASの「会員名簿」の配列だけを厳密に処理
 for m in raw_members:
     if isinstance(m, list) and len(m) >= 1:
         name = str(m[0]).strip()
-        if name and name != "":
+        
+        # 名前が空っぽでなければ、ドロップダウンの絶対的な正解リストに追加
+        if name and name != "" and name != "undefined":
             MEMBER_LIST.append(name)
             
-            # C列のパスワードを取得
+            # 2番目の要素（パスワード）を安全に取得
             if len(m) >= 2 and m[1] is not None and str(m[1]).strip() != "":
                 PASSWORD_DICT[name] = str(m[1]).strip().split('.')[0].zfill(4)
+            else:
+                PASSWORD_DICT[name] = ""
                 
-            # D列の「現在の保有JAY」をそのまま取得（★スプレッドシートが100%正解のマスターデータ）
+            # 3番目の要素（スプレッドシートのD列の計算残高）を100%そのまま無加工で取得
             if len(m) >= 3 and m[2] is not None:
-                BALANCE_DICT[name] = int(m[2])
+                try:
+                    BALANCE_DICT[name] = int(float(str(m[2]).strip()))
+                except ValueError:
+                    BALANCE_DICT[name] = 3000
             else:
                 BALANCE_DICT[name] = 3000
 
@@ -71,20 +80,18 @@ if sender != "選択してください":
     correct_password = PASSWORD_DICT.get(sender, "")
     
     if correct_password:
-        # パスワードが登録されている場合、入力欄を表示
         input_password = st.text_input("🔑 4桁の暗証番号（誕生日など）を入力してください", type="password", max_chars=4)
         
         if input_password:
             if input_password.strip().zfill(4) == correct_password:
                 authenticated = True
-                # 💡 スプレッドシート側の残高を1円のズレもなくそのまま表示
                 current_balance = BALANCE_DICT.get(sender, 3000)
                 st.success(f"🔓 認証成功！ {sender} さんとしてログインしました。")
                 st.info(f"💰 **現在の所持残高: {current_balance} JAY**")
             else:
                 st.error("❌ 暗証番号が一致しません。もう一度ご確認ください。")
     else:
-        # スプレッドシート側にパスワードが空欄、または未設定の場合はそのまま通す
+        # パスワードが未登録の場合はそのまま通す
         authenticated = True
         current_balance = BALANCE_DICT.get(sender, 3000)
         st.info(f"💰 **{sender} さんの現在の所持残高: {current_balance} JAY** (※暗証番号が未登録です)")
@@ -93,11 +100,10 @@ else:
 
 st.markdown("---")
 
-# 認証が成功している場合のみ、以下のタブ（送金・掲示板）を操作できるようにする
+# 認証が成功している場合のみ、送金・掲示板を表示
 if authenticated:
     current_balance = BALANCE_DICT.get(sender, 3000)
     
-    # 🗂️ タブの分割
     tab1, tab2 = st.tabs(["🏪 JAY商品バザール掲示板", "💝 感謝のJAY送金"])
 
     # ==========================================
@@ -106,7 +112,6 @@ if authenticated:
     with tab1:
         bazaar_mode = st.radio("メニューを選んでください", ["📦 出品されている商品を見る", "➕ 新しい商品・サービスを出品する"], horizontal=True)
         
-        # --- 🟢 モードA：商品を出品する画面 ---
         if bazaar_mode == "➕ 新しい商品・サービスを出品する":
             st.subheader("📝 新しい商品・サービスを出品する")
             
@@ -155,8 +160,6 @@ if authenticated:
                             st.balloons()
                             time.sleep(2)
                             st.rerun()
-
-        # --- 🔵 モードB：みんなの商品を見る画面 ---
         else:
             st.subheader("💬 出品中のアイテム一覧")
             
@@ -170,7 +173,6 @@ if authenticated:
                         with col1:
                             img_url = prod.get('image_url', '')
                             default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
-                            
                             if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")):
                                 try:
                                     st.image(img_url, use_container_width=True)
