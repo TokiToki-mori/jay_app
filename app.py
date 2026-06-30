@@ -9,7 +9,7 @@ import base64
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの最新動作確認済みGAS URL（直接埋め込み完了）
+# 🔗 モリケンタロウさんの最新動作確認済みGAS URL
 GAS_URL = "https://script.google.com/macros/s/AKfycby_xMsvYyVBNDe4YgtDedDMuU_ph1_X1K0NyiVyyzNgqKNSo7uPciL_kZG4FUbcCxny/exec"
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
@@ -97,21 +97,29 @@ st.markdown("---")
 if authenticated:
     current_balance = BALANCE_DICT.get(sender, 0)
     
-    # モリケンタロウさんの指定通り「コミュニティ掲示板」に変更
     tab1, tab2 = st.tabs(["🏪 コミュニティ掲示板", "💝 感謝のJAY送金"])
 
     # ==========================================
     # 🏪 タブ1：コミュニティ掲示板画面
     # ==========================================
     with tab1:
-        bazaar_mode = st.radio("メニューを選んでください", ["📦 出品されている商品を見る", "➕ 新しい商品・サービスを出品する"], horizontal=True)
+        # 出品完了後に「一覧を見る」へ自動で戻すため、SessionStateでラジオボタンの初期値を管理します
+        if "bazaar_menu_index" not in st.session_state:
+            st.session_state.bazaar_menu_index = 0
+            
+        bazaar_mode = st.radio(
+            "メニューを選んでください", 
+            ["📦 出品されている商品を見る", "➕ 新しい商品・サービスを出品する"], 
+            index=st.session_state.bazaar_menu_index,
+            horizontal=True,
+            key="bazaar_menu_radio"
+        )
         
         if bazaar_mode == "➕ 新しい商品・サービスを出品する":
             st.subheader("📝 新しい内容を掲示板に投稿する")
             
             prod_title = st.text_input("タイトル（投稿名）", placeholder="例：無農薬の新タマネギ譲ります！ / 草むしり手伝ってください")
             
-            # モリケンタロウさん指定の3つの選択肢
             prod_category = st.selectbox("カテゴリ", [
                 "🟢 出品（モノ・サービスを譲る/売る）", 
                 "🔵 HELP（困りごと・手伝ってほしい）", 
@@ -120,9 +128,8 @@ if authenticated:
             
             prod_desc = st.text_area("詳しい内容・提供可能日時など", placeholder="詳細を自由に詳しく書いてください。")
             
-            # 「そういえば」の場合は自動100JAY付与のため入力をスキップ
             if prod_category == "✨ そういえば（JWティー体験談・気づき）":
-                st.info("💡 「そういえば（JWティー体験談）」の投稿感謝ボーナスとして、投稿完了時に自動で **100 JAY** があなたの残高に付与されます！")
+                st.info("💡 「そういえば（JWティー体験談）」の投稿感謝ボーナスとして、投稿完了時に自動で **100 JAY** があなたの残高に付与され、コメント欄に事務局からのメッセージが自動投稿されます！")
                 prod_price = 0
                 prod_delivery = "なし"
                 prod_delivery_detail = "なし"
@@ -167,7 +174,35 @@ if authenticated:
                         if res.status_code == 200:
                             st.success("🎉 掲示板への投稿が完了しました！")
                             st.balloons()
+                            
+                            # 【新規追加】「そういえば」の場合は、自動でJay事務局からのお礼コメントを裏側で追加送信
+                            if prod_category == "✨ そういえば（JWティー体験談・気づき）":
+                                try:
+                                    # 最新の投稿一覧を取得して、今投稿した商品のIDを特定
+                                    latest_data = requests.get(GAS_URL).json()
+                                    latest_products = latest_data.get("products", [])
+                                    if latest_products:
+                                        # senderが一致する一番最後の投稿＝今追加した投稿
+                                        my_posts = [p for p in latest_products if p["sender"] == sender]
+                                        if my_posts:
+                                            target_prod_id = my_posts[-1]["id"]
+                                            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                            
+                                            # 事務局コメントの送信
+                                            comment_data = {
+                                                "action": "add_comment",
+                                                "product_id": target_prod_id,
+                                                "sender": "Jay事務局",
+                                                "message": "素晴らしい気づきの投稿ありがとうございます！100JAYを事務局からプレゼントします！",
+                                                "timestamp": now_str
+                                            }
+                                            requests.post(GAS_URL, data=json.dumps(comment_data))
+                                except Exception:
+                                    pass # コメント連携の例外はアプリを止めないよう処理
+                            
+                            # 【機能改善】風船を見せた後、自動的に「出品されている商品を見る」タブに戻るように設定
                             time.sleep(2)
+                            st.session_state.bazaar_menu_index = 0
                             st.rerun()
         else:
             st.subheader("💬 投稿一覧")
@@ -243,7 +278,11 @@ if authenticated:
                         
                         if prod_comments:
                             for cm in prod_comments:
-                                st.markdown(f"👤 **{cm['sender']}** ({cm['timestamp']}): {cm['message']}")
+                                # Jay事務局からのコメントは少し目立つように太字で強調表示
+                                if cm['sender'] == "Jay事務局":
+                                    st.markdown(f"📢 **{cm['sender']}** ({cm['timestamp']}): **{cm['message']}**")
+                                else:
+                                    st.markdown(f"👤 **{cm['sender']}** ({cm['timestamp']}): {cm['message']}")
                         else:
                             st.caption("まだやり取りはありません。質問やメッセージを下に書き込んでみましょう。")
                         
