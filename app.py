@@ -9,8 +9,8 @@ import base64
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 モリケンタロウさんの最新GASのURL
-GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
+# 🔗 【★本当の最新URL】今モリケンタロウさんが発行してくださった本物のGAS URLです
+GAS_URL = "https://script.google.com/macros/s/AKfycbyy4RIstldrA7Zruat1zdGTIwqvjcvyWHGtgvDffT2DNYrNfUj2SqOhN_NPfd8wEAI/exec"
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
