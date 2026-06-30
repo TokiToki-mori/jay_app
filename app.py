@@ -48,15 +48,20 @@ all_comments = all_data.get("comments", [])
 st.title("✨ コミュニティ通貨 JAY 総合システム")
 st.write("感謝の送金と、メンバー同士の商品・サービスバザールを循環させましょう。")
 
-# 👤 ログイン（ユーザー選択）
-st.sidebar.header("👤 ログイン設定")
-sender = st.sidebar.selectbox("あなたのお名前を選択してください", MEMBER_LIST, key="global_user")
+st.markdown("---")
+
+# ==========================================
+# 👤 【★スマホ最適化改良】メイン画面の一番上にログイン配置
+# ==========================================
+st.subheader("👤 あなたのお名前を選択してください")
+sender = st.selectbox("お名前を選ぶと、残高確認や投稿・コメントができるようになります", MEMBER_LIST, key="global_user", label_visibility="collapsed")
 
 if sender != "選択してください":
     current_balance = get_current_balance(sender, all_history)
-    st.sidebar.metric(label=f"{sender} さんの所持JAY", value=f"{current_balance} JAY")
+    # 残高を目立つようにメイン画面上部に表示
+    st.info(f"💰 **{sender} さんの現在の所持残高: {current_balance} JAY**")
 else:
-    st.sidebar.warning("⚠️ 左メニューでお名前を選択すると、残高確認や投稿ができるようになります。")
+    st.warning("⚠️ 最初にお名前を選択してください。選択するまで以下の機能は利用できません。")
 
 st.markdown("---")
 
@@ -74,7 +79,7 @@ with tab1:
 
     if st.button("💝 感謝のJAYを送信する", use_container_width=True, key="send_btn"):
         if sender == "選択してください":
-            st.error("❌ 画面左側（メニュー）であなたのお名前を選択してください。")
+            st.error("❌ 画面上部であなたのお名前を選択してください。")
         elif receiver == "選択してください":
             st.error("❌ 送る相手を選択してください。")
         elif sender == receiver:
@@ -122,25 +127,21 @@ with tab2:
         
         if st.button("🚀 この内容で掲示板に出品する", use_container_width=True):
             if sender == "選択してください":
-                st.error("❌ 画面左側（メニュー）であなたのお名前を選択してください。")
+                st.error("❌ 画面上部であなたのお名前を選択してください。")
             elif not prod_title:
                 st.error("❌ 商品のタイトルを入力してください。")
             else:
-                # 初期値はスニーカー画像
                 final_image_string = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
                 
-                # 📸 写真があれば、外部サーバーを使わず、直接データとして文字化（Base64）する
                 if uploaded_file is not None:
                     try:
                         file_bytes = uploaded_file.getvalue()
-                        # 容量削減のために極端に大きい画像対策（念のため文字列化）
                         encoded_string = base64.b64encode(file_bytes).decode("utf-8")
                         mime_type = uploaded_file.type
                         final_image_string = f"data:{mime_type};base64,{encoded_string}"
                     except Exception as e:
                         st.error(f"❌ 画像の処理中にエラーが発生しました: {str(e)}")
                 
-                # GASへ送るデータセット
                 data = {
                     "action": "add_product",
                     "sender": sender,
@@ -152,7 +153,7 @@ with tab2:
                     "delivery_detail": prod_delivery_detail,
                     "image_data": "uploaded",
                     "image_name": "image.jpg",
-                    "image_url": final_image_string # ここにデータそのものを乗せてスプレッドシートに保存
+                    "image_url": final_image_string
                 }
                 
                 with st.spinner("🔄 スプレッドシートに商品情報を記録中..."):
@@ -180,7 +181,6 @@ with tab2:
                         
                         if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")):
                             try:
-                                # URL、または埋め込みデータとしてそのままバシッと表示
                                 st.image(img_url, use_container_width=True)
                             except Exception:
                                 st.image(default_img, use_container_width=True)
@@ -248,7 +248,7 @@ with tab2:
                         
                         if submit_comment:
                             if sender == "選択してください":
-                                st.error("❌ 画面左側であなたのお名前を選択してから書き込んでください。")
+                                st.error("❌ 画面上部でお名前を選択してから書き込んでください。")
                             elif not new_comment_msg:
                                 st.error("❌ コメント内容が空欄です。")
                             else:
