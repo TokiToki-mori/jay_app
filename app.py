@@ -9,7 +9,7 @@ import base64
 # 1. ページの設定
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
-# 🔗 【★本当の最新URL】今モリケンタロウさんが発行してくださった本物のGAS URLです
+# 🔗 モリケンタロウさんの最新GAS URL
 GAS_URL = "https://script.google.com/macros/s/AKfycbyy4RIstldrA7Zruat1zdGTIwqvjcvyWHGtgvDffT2DNYrNfUj2SqOhN_NPfd8wEAI/exec"
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
@@ -26,36 +26,37 @@ def get_all_data():
 all_data = get_all_data()
 
 # ==========================================
-# 👤 【★データ不整合の完全撲滅ロジック】
+# 👤 【厳格版】データ読み込み＆インデックス修正ロジック
 # ==========================================
 raw_members = all_data.get("members", [])
 MEMBER_LIST = ["選択してください"]
 PASSWORD_DICT = {}
 BALANCE_DICT = {} 
 
-# 他のシート（過去ログなど）からは一切拾わず、GASの「会員名簿」の配列だけを厳密に処理
 for m in raw_members:
     if isinstance(m, list) and len(m) >= 1:
         name = str(m[0]).strip()
         
-        # 名前が空っぽでなければ、ドロップダウンの絶対的な正解リストに追加
-        if name and name != "" and name != "undefined":
+        # 名前が有効な場合のみ処理
+        if name and name != "" and name != "undefined" and name != "選択してください":
             MEMBER_LIST.append(name)
             
-            # 2番目の要素（パスワード）を安全に取得
-            if len(m) >= 2 and m[1] is not None and str(m[1]).strip() != "":
-                PASSWORD_DICT[name] = str(m[1]).strip().split('.')[0].zfill(4)
+            # 【★決定的なバグ修正】
+            # m[0]=A列(名前), m[1]=B列(日時), m[2]=C列(パスワード), m[3]=D列(残高)
+            # パスワード（C列 = m[2]）を厳密に取得
+            if len(m) >= 3 and m[2] is not None and str(m[2]).strip() != "":
+                PASSWORD_DICT[name] = str(m[2]).strip().split('.')[0].zfill(4)
             else:
-                PASSWORD_DICT[name] = ""
+                PASSWORD_DICT[name] = "NONE_PASSWORD" # 空白の場合は絶対突破できないダミー文字列をセット
                 
-            # 3番目の要素（スプレッドシートのD列の計算残高）を100%そのまま無加工で取得
-            if len(m) >= 3 and m[2] is not None:
+            # 残高（D列 = m[3]）を厳密に取得
+            if len(m) >= 4 and m[3] is not None:
                 try:
-                    BALANCE_DICT[name] = int(float(str(m[2]).strip()))
+                    BALANCE_DICT[name] = int(float(str(m[3]).strip()))
                 except ValueError:
-                    BALANCE_DICT[name] = 3000
+                    BALANCE_DICT[name] = 0
             else:
-                BALANCE_DICT[name] = 3000
+                BALANCE_DICT[name] = 0
 
 all_history = all_data.get("history", [])
 all_products = all_data.get("products", [])
@@ -77,24 +78,19 @@ sender = st.selectbox("お名前を選ぶと、残高確認や投稿・コメン
 authenticated = False
 
 if sender != "選択してください":
-    correct_password = PASSWORD_DICT.get(sender, "")
+    correct_password = PASSWORD_DICT.get(sender, "NONE_PASSWORD")
     
-    if correct_password:
-        input_password = st.text_input("🔑 4桁の暗証番号（誕生日など）を入力してください", type="password", max_chars=4)
-        
-        if input_password:
-            if input_password.strip().zfill(4) == correct_password:
-                authenticated = True
-                current_balance = BALANCE_DICT.get(sender, 3000)
-                st.success(f"🔓 認証成功！ {sender} さんとしてログインしました。")
-                st.info(f"💰 **現在の所持残高: {current_balance} JAY**")
-            else:
-                st.error("❌ 暗証番号が一致しません。もう一度ご確認ください。")
-    else:
-        # パスワードが未登録の場合はそのまま通す
-        authenticated = True
-        current_balance = BALANCE_DICT.get(sender, 3000)
-        st.info(f"💰 **{sender} さんの現在の所持残高: {current_balance} JAY** (※暗証番号が未登録です)")
+    # 【★セキュリティ穴塞ぎ】パスワード未登録を理由にスルーさせる不具合を完全撤廃
+    input_password = st.text_input("🔑 4桁の暗証番号（誕生日など）を入力してください", type="password", max_chars=4)
+    
+    if input_password:
+        if correct_password != "NONE_PASSWORD" and input_password.strip().zfill(4) == correct_password:
+            authenticated = True
+            current_balance = BALANCE_DICT.get(sender, 0)
+            st.success(f"🔓 認証成功！ {sender} さんとしてログインしました。")
+            st.info(f"💰 **現在の所持残高: {current_balance} JAY**")
+        else:
+            st.error("❌ 暗証番号が一致しないか、アカウントが正しく登録されていません。")
 else:
     st.warning("⚠️ 最初にお名前を選択してください。選択するまで以下の機能は利用できません。")
 
@@ -102,7 +98,7 @@ st.markdown("---")
 
 # 認証が成功している場合のみ、送金・掲示板を表示
 if authenticated:
-    current_balance = BALANCE_DICT.get(sender, 3000)
+    current_balance = BALANCE_DICT.get(sender, 0)
     
     tab1, tab2 = st.tabs(["🏪 JAY商品バザール掲示板", "💝 感謝のJAY送金"])
 
