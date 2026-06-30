@@ -13,7 +13,7 @@ st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙
 GAS_URL = "https://script.google.com/macros/s/AKfycbx5rmJBSnX6FNs3FSL4bbxIrSppmI9ksrT00Q2RYQSM7tHu6AHzfBXL8wUF8y3yaho/exec"
 
 # 💰 全員の初期持ちJAY数
-INITIAL_JAY = 1000
+INITIAL_JAY = 3000
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
