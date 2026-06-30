@@ -26,7 +26,7 @@ def get_all_data():
 all_data = get_all_data()
 
 # ==========================================
-# 👤 【厳格版】データ読み込み＆インデックス修正ロジック
+# 👤 【生データ完全準拠版】インデックス修正ロジック
 # ==========================================
 raw_members = all_data.get("members", [])
 MEMBER_LIST = ["選択してください"]
@@ -41,18 +41,21 @@ for m in raw_members:
         if name and name != "" and name != "undefined" and name != "選択してください":
             MEMBER_LIST.append(name)
             
-            # 【★決定的なバグ修正】
-            # m[0]=A列(名前), m[1]=B列(日時), m[2]=C列(パスワード), m[3]=D列(残高)
-            # パスワード（C列 = m[2]）を厳密に取得
-            if len(m) >= 3 and m[2] is not None and str(m[2]).strip() != "":
-                PASSWORD_DICT[name] = str(m[2]).strip().split('.')[0].zfill(4)
+            # 【★生データ完全一致修正】
+            # m[0] = 名前
+            # m[1] = 暗証番号 (4桁)
+            # m[2] = 現在の保有JAY
+            
+            # 暗証番号（m[1]）を厳密に取得
+            if len(m) >= 2 and m[1] is not None and str(m[1]).strip() != "":
+                PASSWORD_DICT[name] = str(m[1]).strip().split('.')[0].zfill(4)
             else:
-                PASSWORD_DICT[name] = "NONE_PASSWORD" # 空白の場合は絶対突破できないダミー文字列をセット
+                PASSWORD_DICT[name] = "NONE_PASSWORD" # パスワードがないダミー会員はログイン不可にする
                 
-            # 残高（D列 = m[3]）を厳密に取得
-            if len(m) >= 4 and m[3] is not None:
+            # 残高（m[2]）を厳密に取得
+            if len(m) >= 3 and m[2] is not None:
                 try:
-                    BALANCE_DICT[name] = int(float(str(m[3]).strip()))
+                    BALANCE_DICT[name] = int(float(str(m[2]).strip()))
                 except ValueError:
                     BALANCE_DICT[name] = 0
             else:
@@ -80,7 +83,6 @@ authenticated = False
 if sender != "選択してください":
     correct_password = PASSWORD_DICT.get(sender, "NONE_PASSWORD")
     
-    # 【★セキュリティ穴塞ぎ】パスワード未登録を理由にスルーさせる不具合を完全撤廃
     input_password = st.text_input("🔑 4桁の暗証番号（誕生日など）を入力してください", type="password", max_chars=4)
     
     if input_password:
