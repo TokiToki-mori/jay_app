@@ -10,8 +10,7 @@ import base64
 st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙", layout="centered")
 
 # 🔗 モリケンタロウさんの最新GAS URL
-GAS_URL = "https://script.google.com/macros/s/AKfycbyy4RIstldrA7Zruat1zdGTIwqvjcvyWHGtgvDffT2DNYrNfUj2SqOhN_NPfd8wEAI/exec"
-
+GAS_URL = "https://script.google.com/macros/s/AKfycbyBe_fC-CZGD7wu9Oek7SZTeKOJJuWh3yf8Ti6TuVwGAlLeu7mor4uoT7tt-_4HlVKq/exec"
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
     try:
