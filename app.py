@@ -12,8 +12,8 @@ st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙
 # 🔗 モリケンタロウさんの最新動作確認済みGAS URL
 GAS_URL = "https://script.google.com/macros/s/AKfycby_xMsvYyVBNDe4YgtDedDMuU_ph1_X1K0NyiVyyzNgqKNSo7uPciL_kZG4FUbcCxny/exec"
 
-# 🎨 指定いただいたJAY公式デフォルト画像URL（Googleドライブ直リンク形式）
-DEFAULT_JAY_IMAGE = "https://drive.google.com/uc?export=view&id=1M1C7g4NzzLUFCcdS9L68_2rvaoSMg8yL"
+# 🎨 安定した画像公開サーバーに設置したJAY公式イラストURL（直リンク確定版）
+DEFAULT_JAY_IMAGE = "https://i.imgur.com/83p1yC2.png"
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
@@ -90,7 +90,7 @@ if sender != "選択してください":
             st.success(f"🔓 認証成功！ {sender} さんとしてログインしました。")
             st.info(f"💰 **現在の所持残高: {current_balance} JAY**")
         else:
-            st.error("❌ 暗証番号が一致しないか、アカウントが正しく registered されていません。")
+            st.error("❌ 暗証番号が一致しないか、アカウントが正しく登録されていません。")
 else:
     st.warning("⚠️ 最初にお名前を選択してください。選択するまで以下の機能は利用できません。")
 
@@ -145,7 +145,6 @@ if authenticated:
                 if not prod_title:
                     st.error("❌ タイトルを入力してください。")
                 else:
-                    # 💡 画像なしの場合の初期値を指定画像URLへ変更完了
                     final_image_string = DEFAULT_JAY_IMAGE
                     
                     if uploaded_file is not None:
@@ -215,8 +214,8 @@ if authenticated:
                         col1, col2 = st.columns([1, 2])
                         with col1:
                             img_url = prod.get('image_url', '')
-                            # 💡 表示時も画像データが不正な場合は新しいJAY公式画像をデフォルトにするよう変更
-                            if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")):
+                            # 画像データが不正、空欄、または過去のGoogleドライブリンクの残骸だった場合は、Imgurの安定画像に差し替えて表示する安全ロジック
+                            if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")) and "drive.google.com" not in img_url:
                                 try:
                                     st.image(img_url, use_container_width=True)
                                 except Exception:
