@@ -12,8 +12,8 @@ st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙
 # 🔗 モリケンタロウさんの最新動作確認済みGAS URL
 GAS_URL = "https://script.google.com/macros/s/AKfycby_xMsvYyVBNDe4YgtDedDMuU_ph1_X1K0NyiVyyzNgqKNSo7uPciL_kZG4FUbcCxny/exec"
 
-# 🎨 【完全確定】外部ブロックを一切受けない高安定サーバー上の公式イラスト直リンクURL
-DEFAULT_JAY_IMAGE = "https://res.cloudinary.com/dydg58jra/image/upload/v1719827000/jay_default.png"
+# 🎨 元の正常に動いていたスニーカーのデフォルト画像URLに戻しました
+DEFAULT_JAY_IMAGE = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
@@ -214,8 +214,7 @@ if authenticated:
                         col1, col2 = st.columns([1, 2])
                         with col1:
                             img_url = prod.get('image_url', '')
-                            # 古いエラーURLの残骸（imgurやdrive等）が入っている場合は、高安定な公式イラスト直リンクに差し替える安全ロジック
-                            if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")) and "imgur.com" not in img_url and "drive.google.com" not in img_url and img_url != "0":
+                            if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")):
                                 try:
                                     st.image(img_url, use_container_width=True)
                                 except Exception:
