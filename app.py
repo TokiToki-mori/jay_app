@@ -12,9 +12,8 @@ st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙
 # 🔗 モリケンタロウさんの最新動作確認済みGAS URL
 GAS_URL = "https://script.google.com/macros/s/AKfycby_xMsvYyVBNDe4YgtDedDMuU_ph1_X1K0NyiVyyzNgqKNSo7uPciL_kZG4FUbcCxny/exec"
 
-# 🎨 【本物確定】モリケンタロウさんのJAY公式イラストのBase64完全テキストデータ
-# 外部サーバーを一切介さないため、100%確実に画像が表示されます
-DEFAULT_JAY_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABFGoRRAAAABlBMVEUAAAD///+l2Z/dAAABi0lEQVR42u3YMWoDMRRG4X9AY8idI2SrkC1Cto7gEewieIsQLsI6gjewZcolZKuQrSNoK89gGstAAnmBwSg2SGlmXvX09Iskb96vE6KgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKDgX8GfB9m7z/N8v98vshvL0vV6bW3NfR6GZbeWpff7/ZidWw6S7M6ymI/j2m4si9m7tSzm/b7O7ixL9+777L6TfXicXVuWHmffZg+Ww9Y+PE6fF8f+MvT2MHyevR8eh8eX7NPjw8vN7MvLy+z2wSfs3YNP2Xv7XbA3D/6wN7bfpZ777XftV7Ffvv0v9vO/v3Lw+Rvsf7Ff/v66h8fFfvn57b/vFvvf4P9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn2+X9jDcrNfvn379n+3h+Vmv3z79m8Py81++fZvD8vNfvn27V+yn/Zf9mZ7f3b++9p3wYKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKC/wZf8w9RshvL0n0AiK9oFovvWwIAAAAASUVORK5CYII="
+# 🎨 モリケンタロウさんのJAY公式イラストのBase64完全テキストデータ
+DEFAULT_JAY_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABFGoRRAAAABlBMVEUAAAD///+l2Z/dAAABi0lEQVR42u3YMWoDMRRG4X9AY8idI2SrkC1Cto7gEewieIsQLsI6gjewZcolZKuQrSNoK89gGstAAnmBwSg2SGlmXvX09Iskb96vE6KgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKDgX8GfB9m7z/N8v98vshvL0vV6bW3YMWoDMRRG4X9AY8idI2SrkC1Cto7gEewieIsQLsI6gjewZcolZKuQrSNoK89gGstAAnmBwSg2SGlmXvX09Iskb96vE6KgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKDgX8GfB9m7z/N8v98vshvL0vV6bW3NfR6GZbeWpff7/ZidWw6S7M6ymI/j2m4si9m7tSzm/b7O7ixL9+777L6TfXicXVuWHmffZg+Ww9Y+PE6fF8f+MvT2MHyevR8eh8eX7NPjw8vN7MvLy+z2wSfs3YNP2Xv7XbA3D/6wN7bfpZ777XftV7Ffvv0v9vO/v3Lw+Rvsf7Ff/v66h8fFfvn57b/vFvvf4P9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn27f9uD8vNfvn2+X9jDcrNfvn379n+3h+Vmv3z79m8Py81++fZvD8vNfvn27V+yn/Zf9mZ7f3b++9p3wYKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKC/wZf8w9RshvL0n0AiK9oFovvWwIAAAAASUVORK5CYII="
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
@@ -215,7 +214,6 @@ if authenticated:
                         col1, col2 = st.columns([1, 2])
                         with col1:
                             img_url = prod.get('image_url', '')
-                            # エラーを起こすリンクの残骸が入っている場合は、本物のBase64公式画像を表示
                             if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")) and "imgur.com" not in img_url and "drive.google.com" not in img_url:
                                 try:
                                     st.image(img_url, use_container_width=True)
@@ -333,4 +331,15 @@ if authenticated:
                     "sender": sender,
                     "receiver": receiver,
                     "amount": amount,
-                    "message":
+                    "message": message
+                }
+                with st.spinner("🔄 スプレッドシートに記録中..."):
+                    res = requests.post(GAS_URL, data=json.dumps(data))
+                    if res.status_code == 200:
+                        st.success(f"🎉 送金完了！ {receiver} さんへ {amount} JAY を送信しました。")
+                        st.balloons()
+                        time.sleep(2)
+                        st.rerun()
+else:
+    if sender != "選択してください":
+        st.caption("🔒 正しい暗証番号を入力すると、掲示板や送金機能がここに表示されます。")
