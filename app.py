@@ -12,8 +12,8 @@ st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙
 # 🔗 モリケンタロウさんの最新動作確認済みGAS URL
 GAS_URL = "https://script.google.com/macros/s/AKfycby_xMsvYyVBNDe4YgtDedDMuU_ph1_X1K0NyiVyyzNgqKNSo7uPciL_kZG4FUbcCxny/exec"
 
-# 🎨 安定した画像公開サーバーに設置したJAY公式イラストURL（直リンク確定版）
-DEFAULT_JAY_IMAGE = "https://i.imgur.com/83p1yC2.png"
+# 🎨 モリケンタロウさんのImgurアルバムから抽出した「画像直リンク」に修正完了
+DEFAULT_JAY_IMAGE = "https://i.imgur.com/vHqB10g.png"
 
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
@@ -214,8 +214,8 @@ if authenticated:
                         col1, col2 = st.columns([1, 2])
                         with col1:
                             img_url = prod.get('image_url', '')
-                            # 画像データが不正、空欄、または過去のGoogleドライブリンクの残骸だった場合は、Imgurの安定画像に差し替えて表示する安全ロジック
-                            if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")) and "drive.google.com" not in img_url:
+                            # Imgurのアルバム形式や古いドライブリンクの残骸が含まれる場合は、正しい公式画像直リンクで安全に上書き表示する処理
+                            if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")) and "imgur.com/a/" not in img_url and "drive.google.com" not in img_url:
                                 try:
                                     st.image(img_url, use_container_width=True)
                                 except Exception:
