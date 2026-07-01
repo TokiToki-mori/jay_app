@@ -12,6 +12,9 @@ st.set_page_config(page_title="JAY コミュニティアプリ", page_icon="🪙
 # 🔗 モリケンタロウさんの最新動作確認済みGAS URL
 GAS_URL = "https://script.google.com/macros/s/AKfycby_xMsvYyVBNDe4YgtDedDMuU_ph1_X1K0NyiVyyzNgqKNSo7uPciL_kZG4FUbcCxny/exec"
 
+# 🎨 指定いただいたJAY公式デフォルト画像URL（Googleドライブ直リンク形式）
+DEFAULT_JAY_IMAGE = "https://drive.google.com/uc?export=view&id=1M1C7g4NzzLUFCcdS9L68_2rvaoSMg8yL"
+
 # 📊 Googleスプレッドシートからすべてのデータを一括で取得する関数
 def get_all_data():
     try:
@@ -87,7 +90,7 @@ if sender != "選択してください":
             st.success(f"🔓 認証成功！ {sender} さんとしてログインしました。")
             st.info(f"💰 **現在の所持残高: {current_balance} JAY**")
         else:
-            st.error("❌ 暗証番号が一致しないか、アカウントが正しく登録されていません。")
+            st.error("❌ 暗証番号が一致しないか、アカウントが正しく registered されていません。")
 else:
     st.warning("⚠️ 最初にお名前を選択してください。選択するまで以下の機能は利用できません。")
 
@@ -103,15 +106,14 @@ if authenticated:
     # 🏪 タブ1：コミュニティ掲示板画面
     # ==========================================
     with tab1:
-        # ラジオボタンの状態をSessionStateで直接管理
-        if "bazaar_menu_radio" not in st.session_state:
-            st.session_state.bazaar_menu_radio = "📦 出品されている商品を見る"
+        if "menu_index" not in st.session_state:
+            st.session_state.menu_index = 0
             
         bazaar_mode = st.radio(
             "メニューを選んでください", 
             ["📦 出品されている商品を見る", "➕ 新しい商品・サービスを出品する"], 
-            horizontal=True,
-            key="bazaar_menu_radio"
+            index=st.session_state.menu_index,
+            horizontal=True
         )
         
         if bazaar_mode == "➕ 新しい商品・サービスを出品する":
@@ -143,7 +145,8 @@ if authenticated:
                 if not prod_title:
                     st.error("❌ タイトルを入力してください。")
                 else:
-                    final_image_string = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
+                    # 💡 画像なしの場合の初期値を指定画像URLへ変更完了
+                    final_image_string = DEFAULT_JAY_IMAGE
                     
                     if uploaded_file is not None:
                         try:
@@ -174,7 +177,6 @@ if authenticated:
                             st.success("🎉 掲示板への投稿が完了しました！")
                             st.balloons()
                             
-                            # 「そういえば」の場合は、自動でJay事務局からのお礼コメントを裏側で追加送信
                             if prod_category == "✨ そういえば（JWティー体験談・気づき）":
                                 try:
                                     latest_data = requests.get(GAS_URL).json()
@@ -196,11 +198,12 @@ if authenticated:
                                 except Exception:
                                     pass
                             
-                            # 【修正点】ラジオボタンの状態を強制的に「商品を見る」に書き換えてリロード
                             time.sleep(2)
-                            st.session_state.bazaar_menu_radio = "📦 出品されている商品を見る"
+                            st.session_state.menu_index = 0
                             st.rerun()
         else:
+            st.session_state.menu_index = 1
+            
             st.subheader("💬 投稿一覧")
             
             if not all_products:
@@ -212,14 +215,14 @@ if authenticated:
                         col1, col2 = st.columns([1, 2])
                         with col1:
                             img_url = prod.get('image_url', '')
-                            default_img = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=300"
+                            # 💡 表示時も画像データが不正な場合は新しいJAY公式画像をデフォルトにするよう変更
                             if isinstance(img_url, str) and (img_url.startswith("http") or img_url.startswith("data:image")):
                                 try:
                                     st.image(img_url, use_container_width=True)
                                 except Exception:
-                                    st.image(default_img, use_container_width=True)
+                                    st.image(DEFAULT_JAY_IMAGE, use_container_width=True)
                             else:
-                                st.image(default_img, use_container_width=True)
+                                st.image(DEFAULT_JAY_IMAGE, use_container_width=True)
                                 
                         with col2:
                             st.markdown(f"**🏷️ カテゴリ:** {prod['category']}")
